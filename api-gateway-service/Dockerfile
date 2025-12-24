@@ -4,35 +4,33 @@ FROM python:3.11-slim
 # 2. Environment Variables:
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
-# Ensure the virtual environment uv creates is automatically used
-ENV PATH="/app/.venv/bin:$PATH"
+# Critical: Tell uv to create the virtual environment in a predictable spot
+ENV UV_PROJECT_ENVIRONMENT="/app/.venv"
 
-# 3. Equip the System: Install 'uv' globally before entering the workspace
+# 3. Equip the System: Install 'uv' globally
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 
 # 4. Define the Workspace
 WORKDIR /app
 
-# 5. Install System Dependencies (Postgres & Build Tools)
-# Combined into one RUN to reduce layer bloat
+# 5. Install System Dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libpq-dev \
     gcc \
     && rm -rf /var/lib/apt/lists/*
 
-# 6. Dependency Synchronization (The "Heavy" cached layer)
-# You need both files for 'uv sync' to verify the environment
+# 6. Dependency Synchronization
 COPY pyproject.toml uv.lock ./
 
-# --frozen: Prevents uv from updating the lockfile (ensures reproducibility)
-# --no-install-project: Installs dependencies WITHOUT your app code yet (better caching)
+# Use --no-install-project to cache the heavy dependency layer
 RUN uv sync --frozen --no-install-project --no-dev
 
-# 7. Copy Application Code (The "Frequently Changing" layer)
+# 7. Copy Application Code
 COPY . .
 
-# 8. Final Project Sync (Installs your actual package/app)
+# 8. Final Project Sync 
+# This layer installs your 'main.py' and project logic
 RUN uv sync --frozen --no-dev
 
-# 9. Execution: Note the addition of commas in the JSON array
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+# 9. Execution
+CMD ["uv", "run", "uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
