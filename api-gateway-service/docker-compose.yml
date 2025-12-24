@@ -1,0 +1,39 @@
+services:
+  # The FastAPI Web Service
+  web:
+    build: .
+    ports:
+      - "8000:8000"
+    volumes:
+      - .:/app
+    environment:
+      - DATABASE_URL=postgresql://user:pass@db:5432/micro_db
+      - REDIS_URL=redis://redis:6379/0
+      - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672/
+    depends_on:
+      - db
+      - redis
+      - rabbitmq
+
+  # The Persistent Database
+  db:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: pass
+      POSTGRES_DB: micro_db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  # The In-Memory Cache
+  redis:
+    image: redis:7-alpine
+
+  # The Message Broker
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    ports:
+      - "15672:15672" # Management UI
+
+volumes:
+  postgres_data:
