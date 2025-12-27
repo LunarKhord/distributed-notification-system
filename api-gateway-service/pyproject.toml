@@ -5,6 +5,7 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
+    "aio-pika>=9.5.8",
     "fastapi[standard]>=0.127.0",
     "pydantic>=2.12.5",
     "redis>=7.1.0",

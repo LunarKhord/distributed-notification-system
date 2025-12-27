@@ -12,10 +12,12 @@ services:
       - REDIS_URL=redis://redis:6379/0
       - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672/
     depends_on:
-      - db
-      - redis
-      - rabbitmq
-
+      db:
+        condition: service_started
+      redis:
+        condition: service_started
+      rabbitmq:
+        condition: service_healthy # The gateway only opens once Rabbit is truly ready
   # The Persistent Database
   db:
     image: postgres:15-alpine
@@ -35,6 +37,18 @@ services:
     image: rabbitmq:3-management-alpine
     ports:
       - "15672:15672" # Management UI
+    environment:
+      # Adjusting the watermark to be more permissive (use with caution)
+      - RABBITMQ_VM_MEMORY_HIGH_WATERMARK_RELATIVE=0.7
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "check_running"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          memory: 512M # Ensure the container has enough headroom
 
 volumes:
   postgres_data:
